@@ -1,41 +1,48 @@
-# codemagic.yaml configuration
+# codemagic.yaml for Gigafy
 workflows:
-  ios-workflow:
-    name: iOS Build Workflow
-    instance_type: mac_mini_m2  # Recommended for 2026 builds
-    max_build_duration: 60
+  ios-unsigned-gigafy:
+    name: Gigafy iOS Unsigned Build
+    max_build_duration: 120
+    instance_type: mac_mini_m2  # Upgraded to M2 for faster 2026 build speeds
     environment:
-      groups:
-        # You'll define these in Codemagic UI later (API keys, etc.)
-        - apple_credentials
-      vars:
-        XCODE_SCHEME: "Runner"
       flutter: stable
-      xcode: latest # Uses Xcode 16.2+ as of early 2026
-      cocoapods: default
-
+      groups:
+        - apple_credentials # Ensure this group exists in your Codemagic UI
+    
     triggering:
       events:
         - push
       branch_patterns:
-        - pattern: 'main'
+        - pattern: 'master' # Matches your current branch from the screenshot
           include: true
 
     scripts:
       - name: Get Flutter packages
         script: flutter packages pub get
+
       - name: Install CocoaPods
+        # This prevents the "No Podfile found" error
         script: |
           cd ios
           pod install
-      - name: Build Flutter iOS
-        # Using --no-codesign for initial setup test
-        # Change to "flutter build ipa" once you set up code signing
-        script: flutter build ios --release --no-codesign
+
+      - name: Build & Package Gigafy
+        script: |
+          # 1. Build the app bundle without signing
+          flutter build ios --release --no-codesign
+
+          # 2. Dynamically find the .app folder to stay project-agnostic
+          APP_NAME=$(find build/ios/iphoneos -name "*.app" | head -n 1)
+
+          # 3. Create the IPA structure required for distribution
+          mkdir -p build/ios/iphoneos/Payload
+          cp -r "$APP_NAME" build/ios/iphoneos/Payload/
+
+          # 4. Zip the Payload into an .ipa file
+          cd build/ios/iphoneos && zip -r Gigafy_Unsigned.ipa Payload
 
     artifacts:
-      - build/ios/iphoneos/*.app
-      - build/ios/ipa/*.ipa
+      - build/ios/iphoneos/Gigafy_Unsigned.ipa
 
     publishing:
       email:
