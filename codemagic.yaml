@@ -3,17 +3,17 @@ workflows:
   ios-unsigned-gigafy:
     name: Gigafy iOS Unsigned Build
     max_build_duration: 120
-    instance_type: mac_mini_m2  # Upgraded to M2 for faster 2026 build speeds
+    instance_type: mac_mini_m2  # Optimized for 2026 build speeds
     environment:
       flutter: stable
       groups:
-        - apple_credentials # Ensure this group exists in your Codemagic UI
-    
+        - apple_credentials
+
     triggering:
       events:
         - push
       branch_patterns:
-        - pattern: 'master' # Matches your current branch from the screenshot
+        - pattern: 'master'
           include: true
 
     scripts:
@@ -21,20 +21,28 @@ workflows:
         script: flutter packages pub get
 
       - name: Install CocoaPods
-        # This prevents the "No Podfile found" error
         script: |
+          # Navigate to ios directory
           cd ios
-          pod install
+          
+          # Check if the Podfile you manually created is actually present
+          if [ -f "Podfile" ]; then
+            echo "Podfile detected. Running pod install..."
+            pod install
+          else
+            echo "Error: Podfile not found in /ios directory. Please ensure you pushed it to GitHub."
+            exit 1
+          fi
 
       - name: Build & Package Gigafy
         script: |
           # 1. Build the app bundle without signing
           flutter build ios --release --no-codesign
 
-          # 2. Dynamically find the .app folder to stay project-agnostic
+          # 2. Dynamically find the .app folder
           APP_NAME=$(find build/ios/iphoneos -name "*.app" | head -n 1)
 
-          # 3. Create the IPA structure required for distribution
+          # 3. Create the IPA structure for distribution
           mkdir -p build/ios/iphoneos/Payload
           cp -r "$APP_NAME" build/ios/iphoneos/Payload/
 
