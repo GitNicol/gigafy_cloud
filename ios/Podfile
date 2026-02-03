@@ -1,10 +1,15 @@
-# Standard Flutter Podfile for Windows Users
+# 1. These lines are REQUIRED to tell the Podfile where Flutter is
+target_path = File.expand_path('..', __FILE__)
+source_path = File.join(target_path, 'Flutter', 'podhelper.rb')
+require source_path
+
 platform :ios, '13.0'
 
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
+  # 2. This command now works because of the 'require' at the top
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 end
 
